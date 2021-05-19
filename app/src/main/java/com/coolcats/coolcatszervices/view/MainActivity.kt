@@ -1,17 +1,24 @@
 package com.coolcats.coolcatszervices.view
 
 import android.content.ComponentName
+import android.content.ContentUris
 import android.content.Intent
 import android.content.ServiceConnection
+import android.net.Uri
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.os.IBinder
+import androidx.core.content.ContextCompat
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.resource.bitmap.CenterCrop
+import com.bumptech.glide.request.RequestOptions
 import com.coolcats.coolcatszervices.R
 import com.coolcats.coolcatszervices.model.Zong
 import com.coolcats.coolcatszervices.service.MediaService
 import kotlinx.android.synthetic.main.activity_main.*
+import java.net.URI
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), MediaService.MediaDelegate {
 
     private lateinit var normalServiceIntent: Intent
     private lateinit var boundServiceIntent: Intent
@@ -29,7 +36,7 @@ class MainActivity : AppCompatActivity() {
         override fun onServiceConnected(p0: ComponentName?, p1: IBinder) {
 
             mediaService = (p1 as MediaService.MediaBinder).getServiceClass()
-            mediaService?.updateZongs(zongs)
+            mediaService?.updateZongs(zongs, this@MainActivity)
         }
 
         override fun onServiceDisconnected(p0: ComponentName?) {
@@ -50,7 +57,12 @@ class MainActivity : AppCompatActivity() {
             mediaService?.next()
         }
         play_pause_button.setOnClickListener {
-            mediaService?.playPauseSong()
+            mediaService?.playPauseSong()?.let { isPlaying ->
+                when(isPlaying){
+                    true -> play_pause_button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_pause))
+                    else -> play_pause_button.setImageDrawable(ContextCompat.getDrawable(this, R.drawable.ic_play))
+                }
+            }
         }
     }
 
@@ -65,5 +77,18 @@ class MainActivity : AppCompatActivity() {
         super.onStop()
         unbindService(serviceCon)
         //stopService(normalServiceIntent)
+    }
+
+    override fun currentZong(zong: Zong) {
+        zong.apply {
+            artist_name_textview.text = artistName
+            song_title_text.text = title
+
+            Glide.with(this@MainActivity)
+                .applyDefaultRequestOptions(RequestOptions().centerCrop())
+                .load(songArt)
+                .into(imageView)
+
+        }
     }
 }
